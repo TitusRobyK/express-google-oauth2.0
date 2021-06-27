@@ -2,5 +2,5 @@
 
 ## Decoupled Architecture
 
-![image](https://user-images.githubusercontent.com/32787952/123540259-bbf01000-d75b-11eb-864c-ade8a1357c4a.png)
+![image](https://user-images.githubusercontent.com/32787952/123545502-f797d380-d775-11eb-948d-a88d9521156a.png)
 
