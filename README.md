@@ -89,16 +89,130 @@ React-client and Server logic has been defined in different folders to be clear 
     ![image](https://user-images.githubusercontent.com/32787952/123549313-19995200-d786-11eb-8ecd-72c2d4fed785.png)
     
 * ### Setting up MongoDB in your local
-  * 
+  * Download MongoDB from their [Community Download Website](https://www.mongodb.com/try/download/community)
+
+  * Post downloading , to setup MongoDB in your OS , Follow the instruction from this [website](https://docs.mongodb.com/guides/server/install/)
+
+  * For setting up authentication for the mongoDB Instance , The following procedure first adds a user administrator to a MongoDB instance running without access control and then enables access control.
+
+  * Start MongoDB without access control.
+
+    Start a standalone mongod instance without access control.
+    ```
+     mongod --port 27017 --dbpath /var/lib/mongodb
+
+    ```
   
+  * Connect to the instance by using the following command
+  
+    ```
+     mongo --port 27017 
 
+    ```  
 
+  * From the mongo shell, add a user with the userAdminAnyDatabase role in the admin database. 
+For more info , check out the [db.createUser Doc](https://docs.mongodb.com/manual/reference/method/db.createUser/#mongodb-method-db.createUser)
 
-
+    ```
+     db.createUser({user: "myname", pwd: "mypass", roles: ["userAdminAnyDatabase"]})
+    ```
+ 
+  * Re-start the MongoDB instance with access control.
     
+    Shut down the mongod instance. For example, from the mongo shell, issue the following command:
+  
+    ```
+      db.adminCommand( { shutdown: 1 } )
+    ``` 
+ 
+    Exit the mongo shell & Start the mongod with access control enabled.
+
+    If you start the mongod from the command line, add the --auth command line option:
+
+    ```
+      mongod --auth --dbpath /var/lib/mongodb
+    ```
+
+    Connect to mongod instance using the following command
+
+    ```
+      mongo --port 27017  --authenticationDatabase "admin" -u "myname" -p
+    ```
+
+    Instance will ask the user to input the password, so input the password set in db.createUser step
+
+  * Now formulate the dbconnect MONGODB_URI to be set in the env config file for the express-app.
+
+    ```
+      mongodb://myname:mypass@127.0.0.1:27017/?authSource=admin
+    ```
 
 
+* ### Running the whole program
+  * Clone the repo
+  * After performing all the setups mentioned in the above setup
+  * Change directory to the express-server & run the following command 
+
+      Makesure your mongo instance is running in the background
+     ```
+       npm i
+       npm run dev
+     ```
+      
+      You can observer that the express-app will start working & the API's will be accessible through ``` http://localhost:5000```
+
+   * Change directory to react-client & run the following command
+
+     ```
+       npm i
+       npm run start
+     ```
+
+       You can see that react-client will start working & the page can be accessed through the following ```http://localhost:3000```
 
 
-    
-    
+### Significance of Passport Serializer & Deserialiser
+
+```
+// used to serialize the user for the session
+  passport.serializeUser((user, done) => {
+    done(null, user.id)
+// where is this user.id going? Are we supposed to access this anywhere?
+  })
+
+// used to deserialize the user
+  passport.deserializeUser((id, done) => {
+    User.findById(id, (err, user) => done(err, user))
+  })
+
+``` 
+
+The user id (you provide as the second argument of the done function) is saved in the session and is later used to retrieve the whole object via the deserializeUser function.
+
+serializeUser determines which data of the user object should be stored in the session. The result of the serializeUser method is attached to the session as req.session.passport.user = {}. Here for instance, it would be (as we provide the user id as the key) req.session.passport.user = {id: 'xyz'}
+
+The first argument of deserializeUser corresponds to the key of the user object that was given to the done function (see 1.). So your whole object is retrieved with help of that key. That key here is the user id (key can be any key of the user object i.e. name,email etc). In deserializeUser that key is matched with the in memory array / database or any data resource.
+
+The fetched object is attached to the request object as req.user
+
+#### Visual Flow
+
+```
+passport.serializeUser(function(user, done) {
+    done(null, user.id);
+});              │
+                 │ 
+                 │
+                 └─────────────────┬──→ saved to session
+                                   │    req.session.passport.user = {id: '..'}
+                                   │
+                                   ↓           
+passport.deserializeUser(function(id, done) {
+                   ┌───────────────┘
+                   │
+                   ↓ 
+    User.findById(id, function(err, user) {
+        done(err, user);
+    });            └──────────────→ user object attaches to the request as req.user   
+});
+```
